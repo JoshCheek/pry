@@ -349,7 +349,7 @@ e.g: gist -d my_method
 
       next if opts.help?
 
-      regexp = Regexp.new(opts[:grep], 'i')
+      regexp = Regexp.new(opts[:filter], 'i')
 
       if opts.locals?
         output.print italic("Local variables: ")
