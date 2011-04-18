@@ -21,6 +21,7 @@ def apply_spec_defaults(s)
   s.require_path = 'lib'
   s.add_dependency("ruby_parser",">=2.0.5")
   s.add_dependency("coderay",">=0.9.7")
+  s.add_dependency("awesome_print",">=0.3.2")
   s.add_development_dependency("bacon",">=1.1.0")
   s.homepage = "http://banisterfiend.wordpress.com"
   s.has_rdoc = 'yard'
@@ -50,7 +51,7 @@ namespace :ruby do
     s.add_dependency("method_source",">=0.4.0")
     s.platform = Gem::Platform::RUBY
   end
-  
+
   Rake::GemPackageTask.new(spec) do |pkg|
     pkg.need_zip = false
     pkg.need_tar = false
@@ -60,7 +61,7 @@ end
 [:mingw32, :mswin32].each do |v|
   namespace v do
     spec = Gem::Specification.new do |s|
-      apply_spec_defaults(s)        
+      apply_spec_defaults(s)
       s.add_dependency("method_source",">=0.4.0")
       s.add_dependency("win32console", ">=1.3.0")
       s.platform = "i386-#{v}"
@@ -79,7 +80,7 @@ namespace :jruby do
     s.add_dependency("method_source","=0.2.0")
     s.platform = "java"
   end
-  
+
   Rake::GemPackageTask.new(spec) do |pkg|
     pkg.need_zip = false
     pkg.need_tar = false
