@@ -342,12 +342,13 @@ e.g: gist -d my_method
         on :m, :methods, "Show methods"
         on :M, 'instance-methods', "Show instance methods"
 
-        on :h, :help, 'Print this help message', :tail => true do
-          puts help
-        end
+        on :h, :help, 'Print this help message', :tail => true
       end
 
-      next if opts.help?
+      if opts.help? || args.empty?
+        puts opts.help
+        next
+      end
 
       regexp = Regexp.new(opts[:filter], 'i')
 
