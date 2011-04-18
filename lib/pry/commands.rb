@@ -30,7 +30,7 @@ class Pry
 
     command "hist", "Show and replay Readline history" do |*args|
       hist_array = Readline::HISTORY.to_a
-      
+
       require 'slop'
       if args.empty?
         text = add_line_numbers(hist_array.join("\n"), 0)
@@ -45,7 +45,7 @@ class Pry
         end
         on :h, :help, 'Show this message.', :tail => true do
           output.puts help
-        end        
+        end
       end
 
       next if opts.h?
@@ -64,7 +64,7 @@ class Pry
     command "gem-install", "gem stuff" do |gem_name|
       gem_home = Gem.instance_variable_get(:@gem_home)
       output.puts "Attempting to install gem: #{bold(gem_name)}"
-      
+
       begin
         if File.writable?(gem_home)
           Gem::DependencyInstaller.new.install(gem_name)
@@ -81,7 +81,7 @@ class Pry
         output.puts "Required Gem: #{bold(gem_name)} not found."
         next
       end
-        
+
       Gem.refresh
       output.puts "Refreshed gem cache."
     end
@@ -94,18 +94,18 @@ class Pry
       options = {}
       target = target()
       meth_name = nil
-      
+
       OptionParser.new do |opts|
         opts.banner = %{Usage: stat [OPTIONS] [METH]
-Show method information for method METH and set _file_ and _dir_ locals. 
+Show method information for method METH and set _file_ and _dir_ locals.
 e.g: stat hello_method
 --
 }
-        opts.on("-M", "--instance-methods", "Operate on instance methods.") do 
+        opts.on("-M", "--instance-methods", "Operate on instance methods.") do
           options[:M] = true
         end
 
-        opts.on("-m", "--methods", "Operate on methods.") do 
+        opts.on("-m", "--methods", "Operate on methods.") do
           options[:m] = true
         end
 
@@ -113,7 +113,7 @@ e.g: stat hello_method
           target = Pry.binding_for(target.eval(context))
         end
 
-        opts.on_tail("-h", "--help", "This message.") do 
+        opts.on_tail("-h", "--help", "This message.") do
           output.puts opts
           options[:h] = true
         end
@@ -151,7 +151,7 @@ e.g: stat hello_method
     command "gist-method", "Gist a method to github.", :requires_gem => "gist" do |*args|
       options = {}
       meth_name = nil
-      
+
       OptionParser.new do |opts|
         opts.banner = %{Usage: gist-method [OPTIONS] [METH]
 Gist the method (doc or source) to github.
@@ -163,11 +163,11 @@ e.g: gist -d my_method
           options[:m] = true
         end
 
-        opts.on("-d", "--doc", "Gist a method's documentation.") do 
+        opts.on("-d", "--doc", "Gist a method's documentation.") do
           options[:d] = true
         end
 
-        opts.on_tail("-h", "--help", "This message.") do 
+        opts.on_tail("-h", "--help", "This message.") do
           output.puts opts
           options[:h] = true
         end
@@ -194,7 +194,7 @@ e.g: gist -d my_method
         end
         code_type = :plain
       end
-      
+
       IO.popen("gist -p -t #{type_map[code_type]} -", "w") do |gist|
         gist.puts content
       end
@@ -231,14 +231,14 @@ e.g: gist -d my_method
         Pry.active_instance.custom_completions = Pry::FILE_COMPLETIONS
         Readline.completion_proc = Pry::InputCompleter.build_completion_proc target,
         Pry.active_instance.instance_eval(&Pry::FILE_COMPLETIONS)
-      end        
+      end
     end
 
     alias_command "file-mode", "shell-mode", ""
 
-    command "nesting", "Show nesting information." do 
+    command "nesting", "Show nesting information." do
       nesting = opts[:nesting]
-      
+
       output.puts "Nesting status:"
       output.puts "--"
       nesting.each do |level, obj|
@@ -252,7 +252,7 @@ e.g: gist -d my_method
 
     command "status", "Show status information." do
       nesting = opts[:nesting]
-      
+
       output.puts "Status:"
       output.puts "--"
       output.puts "Receiver: #{Pry.view_clip(target.eval('self'))}"
@@ -284,10 +284,10 @@ e.g: gist -d my_method
         output.puts "Cannot find local context. Did you use `binding.pry` ?"
         next
       end
-     
-      set_file_and_dir_locals(file) 
+
+      set_file_and_dir_locals(file)
       output.puts "\n#{bold('From:')} #{file} @ line #{line_num} in #{klass}##{meth_name}:\n\n"
-      
+
       # This method inspired by http://rubygems.org/gems/ir_b
       File.open(file).each_with_index do |line, index|
         line_n = index + 1
@@ -310,12 +310,12 @@ e.g: gist -d my_method
         end
       end
     end
-    
+
     command "version", "Show Pry version." do
       output.puts "Pry version: #{Pry::VERSION} on Ruby #{RUBY_VERSION}."
     end
-    
-    command "exit-all", "End all nested Pry sessions. Accepts optional return value. Aliases: !@" do 
+
+    command "exit-all", "End all nested Pry sessions. Accepts optional return value. Aliases: !@" do
       str = remove_first_word(opts[:val])
       throw(:breakout, [0, target.eval(str)])
     end
@@ -323,184 +323,110 @@ e.g: gist -d my_method
     alias_command "!!@", "exit-all", ""
 
     command "ls", "Show the list of vars and methods in the current scope. Type `ls --help` for more info." do |*args|
-      options = {}
-      
-      # Set target local to the default -- note that we can set a different target for
-      # ls if we like: e.g ls my_var
-      target = target()
-      
-      OptionParser.new do |opts|
-        opts.banner = %{Usage: ls [OPTIONS] [VAR]\n\
-List information about VAR (the current context by default).
-Shows local and instance variables by default.
---
-}
-        opts.on("-g", "--globals", "Display global variables.") do
-          options[:g] = true
-        end
-        
-        opts.on("-c", "--constants", "Display constants.") do
-          options[:c] = true
-        end
+      require 'slop'
 
-        opts.on("-l", "--locals", "Display locals.") do
-          options[:l] = true
+      opts = Slop.parse args, :multiple_switches do
+        on :v, :verbose, "Show value of variables and constants and locations of methods"
+        on :L, :less, "Only show methods set by the receiver"
+        on :a, :more, "Show all of the methods, including those defined in Object"
+        on :f, :filter, "Regular expression to filter methods and variables",
+          true, :default => ""
+
+        on :l, :locals, "Show local variables"
+        on :g, :globals, "Show global variables"
+        on :i, 'instance-variables', "Show instance variables"
+        on :k, 'class-variables', "Show class variables"
+
+        on :c, :constants, "Show constants"
+
+        on :m, :methods, "Show methods"
+        on :M, 'instance-methods', "Show instance methods"
+
+        on :h, :help, 'Print this help message', :tail => true do
+          puts help
         end
-
-        opts.on("-i", "--ivars", "Display instance variables.") do 
-          options[:i] = true
-        end
-
-        opts.on("-k", "--class-vars", "Display class variables.") do 
-          options[:k] = true
-        end        
-
-        opts.on("-m", "--methods", "Display methods (public methods by default).") do 
-          options[:m] = true
-        end
-
-        opts.on("-M", "--instance-methods", "Display instance methods (only relevant to classes and modules).") do
-          options[:M] = true
-        end
-
-        opts.on("-P", "--public", "Display public methods (with -m).") do 
-          options[:P] = true
-        end
-
-        opts.on("-r", "--protected", "Display protected methods (with -m).") do 
-          options[:r] = true
-        end        
-
-        opts.on("-p", "--private", "Display private methods (with -m).") do 
-          options[:p] = true
-        end
-
-        opts.on("-j", "--just-singletons", "Display just the singleton methods (with -m).") do 
-          options[:j] = true
-        end        
-
-        opts.on("-s", "--super", "Include superclass entries (relevant to constant and methods options).") do 
-          options[:s] = true
-        end
-        
-        opts.on("-a", "--all", "Display all types of entries.") do
-          options[:a] = true
-        end
-
-        opts.on("-v", "--verbose", "Verbose ouput.") do 
-          options[:v] = true
-        end
-
-        opts.on("-f", "--flood", "Do not use a pager to view text longer than one screen.") do 
-          options[:f] = true
-        end
-
-        opts.on_tail("-h", "--help", "Show this message.") do
-          output.puts opts
-          options[:h] = true
-        end
-      end.order(args) do |new_target|
-        target = Pry.binding_for(target.eval("#{new_target}")) if !options[:h]
       end
 
-      # exit if we've displayed help
-      next if options[:h]
+      next if opts.help?
 
-      # default is locals/ivars/class vars.
-      # Only occurs when no options or when only option is verbose
-      options.merge!({
-                       :l => true,
-                       :i => true,
-                       :k => true
-                     }) if options.empty? || (options.size == 1 && options[:v])
+      regexp = Regexp.new(opts[:grep], 'i')
 
-      # Display public methods by default if -m or -M switch is used.
-      options[:P] = true if (options[:m] || options[:M]) && !(options[:p] || options[:r] || options[:j])
-      
-      info = {}
-      target_self = target.eval('self')
-
-      # ensure we have a real boolean and not a `nil` (important when
-      # interpolating in the string)
-      options[:s] = !!options[:s]
-      
-      # Numbers (e.g 0, 1, 2) are for ordering the hash values in Ruby 1.8
-      i = -1
-
-      # Start collecting the entries selected by the user
-      info["local variables"] = [Array(target.eval("local_variables")).sort, i += 1] if options[:l] || options[:a]
-      info["instance variables"] = [Array(target.eval("instance_variables")).sort, i += 1] if options[:i] || options[:a]
-
-      info["class variables"] = [if target_self.is_a?(Module)
-                                   Array(target.eval("class_variables")).sort
-                                 else
-                                   Array(target.eval("self.class.class_variables")).sort
-                                 end, i += 1] if options[:k] || options[:a]
-
-      info["global variables"] = [Array(target.eval("global_variables")).sort, i += 1] if options[:g] || options[:a]
-      
-      info["public methods"] = [Array(target.eval("public_methods(#{options[:s]})")).uniq.sort, i += 1] if (options[:m] && options[:P]) || options[:a]
-
-      info["protected methods"] = [Array(target.eval("protected_methods(#{options[:s]})")).sort, i += 1] if (options[:m] && options[:r]) || options[:a]
-
-      info["private methods"] = [Array(target.eval("private_methods(#{options[:s]})")).sort, i += 1] if (options[:m] && options[:p]) || options[:a]
-
-      info["just singleton methods"] = [Array(target.eval("methods(#{options[:s]})")).sort, i += 1] if (options[:m] && options[:j]) || options[:a]
-      
-      info["public instance methods"] = [Array(target.eval("public_instance_methods(#{options[:s]})")).uniq.sort, i += 1] if target_self.is_a?(Module) && ((options[:M] && options[:P]) || options[:a])
-
-      info["protected instance methods"] = [Array(target.eval("protected_instance_methods(#{options[:s]})")).uniq.sort, i += 1] if target_self.is_a?(Module) && ((options[:M] && options[:r]) || options[:a])
-
-      info["private instance methods"] = [Array(target.eval("private_instance_methods(#{options[:s]})")).uniq.sort, i += 1] if target_self.is_a?(Module) && ((options[:M] && options[:p]) || options[:a])
-      
-      # dealing with 1.8/1.9 compatibility issues :/
-      csuper = options[:s]
-      if Module.method(:constants).arity == 0
-        csuper = nil
+      if opts.locals?
+        output.print italic("Local variables: ")
+        output.puts strip_colors_if_needed(variables(:local, regexp,
+                                                     opts.verbose?).ai({}))
+        output.puts
       end
-      
-      info["constants"] = [Array(target_self.is_a?(Module) ? target.eval("constants(#{csuper})") :
-                                 target.eval("self.class.constants(#{csuper})")).uniq.sort, i += 1] if options[:c] || options[:a]
 
-      text = ""
+      if opts.globals?
+        output.print italic("Global variables: ")
+        output.puts strip_colors_if_needed(variables(:global, regexp,
+                                                     opts.verbose?).ai({}))
+        output.puts
+      end
 
-      # verbose output?
-      if options[:v]
-        # verbose
-        
-        info.sort_by { |k, v| v.last }.each do |k, v|
-          if !v.first.empty?
-            text <<  "#{k}:\n--\n"
-            if Pry.color
-              text << CodeRay.scan(Pry.view(v.first), :ruby).term + "\n"
-            else
-              text << Pry.view(v.first) + "\n"
-            end
-            text << "\n\n"
+      if opts['instance-variables']
+        output.print italic("Instance variables: ")
+        output.puts strip_colors_if_needed(variables(:instance, regexp,
+                                                     opts.verbose?).ai({}))
+        output.puts
+      end
+
+      if opts['class-variables']
+        output.print italic("Class variables: ")
+
+        if Module === target.eval('self')
+          output.puts strip_colors_if_needed(variables(:class, regexp,
+                                                       opts.verbose?).ai({}))
+        else
+          output.puts "(not a module)"
+        end
+
+        output.puts
+      end
+
+      if opts.constants?
+        output.print italic("Constant: ")
+
+        if Module === target.eval('self')
+          output.puts strip_colors_if_needed(constants(regexp,
+                                                       opts.verbose?).ai({}))
+        else
+          output.puts "(not a module)"
+        end
+
+        output.puts
+      end
+
+      if opts['instance-methods']
+        output.print italic("Instance methods: ")
+
+        if Module === target.eval('self')
+          obj = target.eval("self")
+
+          output.puts
+          print_method_list(output, obj.instance_methods(!opts.less?),
+                            regexp, opts.more?, opts.verbose?) do |name|
+            obj.instance_method(name)
           end
+        else
+          output.puts "(not a module)"
         end
 
-        if !options[:f]
-          stagger_output(text)
-        else
-          output.puts text
+        output.puts
+      end
+
+      if opts.methods?
+        output.puts italic("Methods: ")
+
+        obj = target.eval("self")
+
+        print_method_list(output, obj.methods(!opts.less?),
+                          regexp, opts.more?, opts.verbose?) do |name|
+          obj.method(name)
         end
 
-      # plain
-      else
-        list = info.values.sort_by(&:last).map(&:first).inject(&:+)
-        list.uniq! if list
-        if Pry.color
-          text << CodeRay.scan(Pry.view(list), :ruby).term + "\n"
-        else
-          text <<  Pry.view(list) + "\n"
-        end
-        if !options[:f]
-          stagger_output(text)
-        else
-          output.puts text
-        end
-        list
+        output.puts
       end
     end
 
@@ -533,11 +459,11 @@ e.g: cat-file hello.rb
           file_type = type.to_sym
         end
 
-        opts.on("-f", "--flood", "Do not use a pager to view text longer than one screen.") do 
+        opts.on("-f", "--flood", "Do not use a pager to view text longer than one screen.") do
           options[:f] = true
         end
 
-        opts.on_tail("-h", "--help", "This message.") do 
+        opts.on_tail("-h", "--help", "This message.") do
           output.puts opts
           options[:h] = true
         end
@@ -546,7 +472,7 @@ e.g: cat-file hello.rb
       end
 
       next if options[:h]
-      
+
       if !file_name
         output.puts "Must provide a file name."
         next
@@ -567,7 +493,7 @@ e.g: cat-file hello.rb
       options = {}
       target = target()
       file_name = nil
-      
+
       OptionParser.new do |opts|
         opts.banner = %{Usage: eval-file [OPTIONS] FILE
 Eval a Ruby script at top-level or in the specified context. Defaults to top-level.
@@ -579,7 +505,7 @@ e.g: eval-file -c self "hello.rb"
           target = Pry.binding_for(target.eval(context))
         end
 
-        opts.on_tail("-h", "--help", "This message.") do 
+        opts.on_tail("-h", "--help", "This message.") do
           output.puts opts
           options[:h] = true
         end
@@ -607,31 +533,31 @@ e.g: eval-file -c self "hello.rb"
 
       new_constants = Object.constants - old_constants
       output.puts "Brought in the following top-level constants: #{new_constants.inspect}" if !new_constants.empty?
-    end      
+    end
 
     command "cat", "Show output of VAR.inspect. Aliases: inspect" do |obj|
       if !obj
         output.puts "Must provide an object to inspect."
         next
       end
-      
+
       output.puts Pry.view(target.eval("#{obj}"))
     end
 
     alias_command "inspect", "cat", ""
-    
+
     command "cd", "Start a Pry session on VAR (use `cd ..` to go back and `cd /` to return to Pry top-level)",  :keep_retval => true do |obj|
       if !obj
         output.puts "Must provide an object."
         next
       end
-      
+
       throw(:breakout, opts[:nesting].level) if obj == ".."
 
-      if obj == "/" 
+      if obj == "/"
         throw(:breakout, 1) if opts[:nesting].level > 0
         next
-      end    
+      end
 
       Pry.start target.eval("#{obj}")
     end
@@ -640,18 +566,18 @@ e.g: eval-file -c self "hello.rb"
       options = {}
       target = target()
       meth_name = nil
-      
+
       OptionParser.new do |opts|
         opts.banner = %{Usage: show-doc [OPTIONS] [METH]
 Show the comments above method METH. Tries instance methods first and then methods by default.
 e.g show-doc hello_method
 --
 }
-        opts.on("-M", "--instance-methods", "Operate on instance methods.") do 
+        opts.on("-M", "--instance-methods", "Operate on instance methods.") do
           options[:M] = true
         end
 
-        opts.on("-m", "--methods", "Operate on methods.") do 
+        opts.on("-m", "--methods", "Operate on methods.") do
           options[:m] = true
         end
 
@@ -659,11 +585,11 @@ e.g show-doc hello_method
           target = Pry.binding_for(target.eval(context))
         end
 
-        opts.on("-f", "--flood", "Do not use a pager to view text longer than one screen.") do 
+        opts.on("-f", "--flood", "Do not use a pager to view text longer than one screen.") do
           options[:f] = true
         end
 
-        opts.on_tail("-h", "--help", "This message.") do 
+        opts.on_tail("-h", "--help", "This message.") do
           output.puts opts
           options[:h] = true
         end
@@ -682,9 +608,9 @@ e.g show-doc hello_method
       next if !doc
 
       next output.puts("No documentation found.") if doc.empty?
-      
+
       doc = process_comment_markup(doc, code_type)
-      
+
       output.puts make_header(meth, code_type, doc)
 
       render_output(options[:f], false, doc)
@@ -697,7 +623,7 @@ e.g show-doc hello_method
       options = {}
       target = target()
       meth_name = nil
-      
+
       OptionParser.new do |opts|
         opts.banner = %{Usage: show-method [OPTIONS] [METH]
 Show the source for method METH. Tries instance methods first and then methods by default.
@@ -708,15 +634,15 @@ e.g: show-method hello_method
           options[:l] = true
         end
 
-        opts.on("-M", "--instance-methods", "Operate on instance methods.") do 
+        opts.on("-M", "--instance-methods", "Operate on instance methods.") do
           options[:M] = true
         end
 
-        opts.on("-m", "--methods", "Operate on methods.") do 
+        opts.on("-m", "--methods", "Operate on methods.") do
           options[:m] = true
         end
 
-        opts.on("-f", "--flood", "Do not use a pager to view text longer than one screen.") do 
+        opts.on("-f", "--flood", "Do not use a pager to view text longer than one screen.") do
           options[:f] = true
         end
 
@@ -724,7 +650,7 @@ e.g: show-method hello_method
           target = Pry.binding_for(target.eval(context))
         end
 
-        opts.on_tail("-h", "--help", "This message.") do 
+        opts.on_tail("-h", "--help", "This message.") do
           output.puts opts
           options[:h] = true
         end
@@ -740,7 +666,7 @@ e.g: show-method hello_method
         output.puts "Invalid method name: #{meth_name}. Type `show-method --help` for help"
         next
       end
-    
+
       code, code_type = code_and_code_type_for(meth)
       next if !code
 
@@ -753,7 +679,7 @@ e.g: show-method hello_method
       if options[:l]
         start_line = meth.source_location ? meth.source_location.last : 1
       end
-      
+
       render_output(options[:f], start_line, code)
       code
     end
@@ -765,10 +691,10 @@ e.g: show-method hello_method
       options = {}
       target = target()
       command_name = nil
-      
+
       OptionParser.new do |opts|
         opts.banner = %{Usage: show-command [OPTIONS] [CMD]
-Show the source for command CMD. 
+Show the source for command CMD.
 e.g: show-command show-method
 --
 }
@@ -776,11 +702,11 @@ e.g: show-command show-method
           options[:l] = true
         end
 
-        opts.on("-f", "--flood", "Do not use a pager to view text longer than one screen.") do 
+        opts.on("-f", "--flood", "Do not use a pager to view text longer than one screen.") do
           options[:f] = true
         end
 
-        opts.on_tail("-h", "--help", "This message.") do 
+        opts.on_tail("-h", "--help", "This message.") do
           output.puts opts
           options[:h] = true
         end
@@ -794,7 +720,7 @@ e.g: show-command show-method
         output.puts "You must provide a command name."
         next
       end
-      
+
       if commands[command_name]
         meth = commands[command_name][:action]
 
@@ -815,7 +741,7 @@ e.g: show-command show-method
         output.puts "No such command: #{command_name}."
       end
     end
-    
+
     command "jump-to", "Jump to a Pry session further up the stack, exiting all sessions below." do |break_level|
       break_level = break_level.to_i
       nesting = opts[:nesting]
@@ -831,7 +757,7 @@ e.g: show-command show-method
       end
     end
 
-    command "exit", "End the current Pry session. Accepts optional return value. Aliases: quit, back" do 
+    command "exit", "End the current Pry session. Accepts optional return value. Aliases: quit, back" do
       str = remove_first_word(opts[:val])
       throw(:breakout, [opts[:nesting].level, target.eval(str)])
     end
@@ -876,7 +802,7 @@ Wait for the early owl.
       output.puts text
       text
     end
-    
+
     command "cohen-poem", "" do
       text = %{
 --
@@ -894,7 +820,7 @@ and so small between the thin pines
 on these enormous landscapes,
 that if you turn your head
 they are lost for hours.
--- Leonard Cohen                    
+-- Leonard Cohen
                 }
   output.puts text
   text

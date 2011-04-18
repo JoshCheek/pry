@@ -73,7 +73,7 @@ describe Pry do
         pry_tester.rep(o)
         str_output.string.should == ""
       end
-      
+
 
       it 'should suppress output if input ends in a ";" (multi-line)' do
         o = Object.new
@@ -403,8 +403,8 @@ describe Pry do
           it "should execute command and show output with :show_output => true flag" do
             str = StringIO.new
             Pry.output = str
-            result = Pry.run_command "ls -afv", :context => RCTest, :show_output => true
-            str.string.should =~ /global variables/
+            result = Pry.run_command "ls -g", :context => RCTest, :show_output => true
+            str.string.should =~ /global variables/i
             Pry.output = $stdout
           end
 
@@ -430,7 +430,17 @@ describe Pry do
           end
 
           it 'should create a comand in  a nested context and that command should be accessible from the parent' do
-            str_input = StringIO.new("@x=nil\ncd 7\n_pry_.commands.instance_eval {\ncommand('bing') { |arg| run arg }\n}\ncd ..\nbing ls\nexit")
+            str_input = StringIO.new(<<EOF)
+@x=nil
+ncd 7
+_pry_.commands.instance_eval do
+  command('bing') { |arg| run arg }
+eml
+cd ..
+bing
+ls -i
+exit
+EOF
             str_output = StringIO.new
             Pry.input = str_input
             obj = Object.new

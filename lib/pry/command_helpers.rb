@@ -1,18 +1,18 @@
 class Pry
   class Commands < CommandBase
-    module CommandHelpers 
+    module CommandHelpers
 
       private
 
       def try_to_load_pry_doc
 
-        # YARD crashes on rbx, so do not require it 
+        # YARD crashes on rbx, so do not require it
         if !Object.const_defined?(:RUBY_ENGINE) || RUBY_ENGINE !~ /rbx/
           require "pry-doc"
         end
       rescue LoadError
       end
-      
+
       def meth_name_from_binding(b)
         meth_name = b.eval('__method__')
         if [:__script__, nil, :__binding__, :__binding_impl__].include?(meth_name)
@@ -29,7 +29,7 @@ class Pry
         target.eval("_file_ = $_file_temp")
         target.eval("_dir_ = $_dir_temp")
       end
-   
+
       def add_line_numbers(lines, start_line)
         line_array = lines.each_line.to_a
         line_array.each_with_index.map do |line, idx|
@@ -110,7 +110,7 @@ class Pry
         if !meth_name
           return nil
         end
-        
+
         if options[:M]
           target.eval("instance_method(:#{meth_name})")
         elsif options[:m]
@@ -127,7 +127,7 @@ class Pry
           end
         end
       end
-      
+
       def make_header(meth, code_type, content)
         num_lines = "Number of lines: #{bold(content.each_line.count.to_s)}"
         case code_type
@@ -147,11 +147,11 @@ class Pry
       def should_use_pry_doc?(meth)
         Pry.has_pry_doc && is_a_c_method?(meth)
       end
-      
+
       def code_type_for(meth)
         # only C methods
         if should_use_pry_doc?(meth)
-          info = Pry::MethodInfo.info_for(meth) 
+          info = Pry::MethodInfo.info_for(meth)
           if info && info.source
             code_type = :c
           else
@@ -169,7 +169,7 @@ class Pry
         end
         code_type
       end
-      
+
       def file_map
         {
           [".c", ".h"] => :c,
@@ -188,7 +188,7 @@ class Pry
           ".json" => :json
         }
       end
-      
+
       def syntax_highlight_by_file_type_or_specified(contents, file_name, file_type)
         _, language_detected = file_map.find do |k, v|
           Array(k).any? do |matcher|
@@ -205,7 +205,7 @@ class Pry
       def normalized_line_number(line_number, total_lines)
         line_number < 0 ? line_number + total_lines : line_number
       end
-      
+
       # returns the file content between the lines and the normalized
       # start and end line numbers.
       def read_between_the_lines(file_name, start_line, end_line)
@@ -219,6 +219,10 @@ class Pry
       # documentation related helpers
       def strip_color_codes(str)
         str.gsub(/\e\[.*?(\d)+m/, '')
+      end
+
+      def strip_colors_if_needed(str)
+        Pry.color ? strip_color_codes(str) : str
       end
 
       def process_rdoc(comment, code_type)
@@ -275,6 +279,113 @@ class Pry
         code.sub /\A\s*\/\*.*?\*\/\s*/m, ''
       end
 
+      def variables(scope, reg, verbose)
+        var_array = target.eval("#{scope}_variables").grep(reg)
+
+        if verbose
+          var_hash = {}
+
+          var_array.each do |name|
+            var_hash[name.to_sym] = target.eval(name.to_s)
+          end
+
+          var_hash
+        else
+          var_array
+        end
+      end
+
+      def constants(reg, verbose)
+        const_array = target.eval("constants").grep(reg)
+
+        if verbose
+          const_hash = {}
+
+          const_array.each do |name|
+            const_hash[name.to_sym] = target.eval("self").const_get(name)
+          end
+
+          const_hash
+        else
+          const_array
+        end
+      end
+
+      def method_info(method)
+        args = ''
+
+        if method.respond_to?(:parameters) && (arg_ary = method.parameters)
+          arg_ary.map!.each_with_index do |(type, name), index|
+            name ||= "arg#{index + 1}"
+
+            case type
+            when :req   then "#{name}"
+            when :opt   then "#{name} = ?"
+            when :rest  then "*#{name}"
+            when :block then "&#{name}"
+            else name
+            end
+          end
+
+          args = '(' + arg_ary.join(', ') + ')'
+        elsif method.arity == 0
+          args = "()"
+        elsif method.arity > 0
+          n = method.arity
+          args = '(' + (1..n).map { |i| "arg#{i}" }.join(", ") + ')'
+        elsif method.arity < 0
+          n = -method.arity
+          args = '(' + (1..n).map { |i| "arg#{i}" }.join(", ") + ')'
+        end
+
+        klass = if method.respond_to? :owner
+                  method.owner.name
+                elsif method.inspect =~ /Method: (.*?)#/
+                  $1
+                end
+
+        location = if method.respond_to? :source_location
+                     file, line = method.source_location
+                     "#{file}:#{line}" if file && line
+                   end
+
+        [method.name.to_s, args, klass.to_s, location]
+      end
+
+      def print_method_list(output, methods, regexp, more, verbose, &block)
+        methods -= Object.instance_methods unless more
+
+        methods = methods.grep(regexp)
+
+        data = methods.sort.map do |name|
+          method_info(yield name)
+        end
+
+        max_name  = data.map { |item| item[0].size }.max
+        max_args  = data.map { |item| item[1].size }.max
+        max_klass = data.map { |item| item[2].size }.max
+
+        data.each do |(name, args, klass, location)|
+          str =  " #{yellow(name.rjust(max_name))}"
+          str << args.ljust(max_args).blue
+          str << " #{gray(klass.ljust(max_klass))}"
+          str << " (#{location})" if verbose && location
+
+          output.puts str
+        end
+      end
+
+      def italic(string)
+        Pry.color ? "\033[#{3}m#{string}\033[0m" : string
+      end
+
+      def yellow(string)
+        Pry.color ? "\033[1;#{33}m#{string}\033[0m" : string
+      end
+
+      def gray(string)
+        Pry.color ? "\033[1;#{37}m#{string}\033[0m" : string
+      end
     end
   end
 end

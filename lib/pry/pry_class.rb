@@ -181,7 +181,8 @@ class Pry
       :commands => Pry.commands
     }.merge!(options)
 
-    null_output = Object.new.tap { |v| v.instance_eval { def puts(*) end } }
+    # No need to create a no-op output, just don't use the result
+    null_output = StringIO.new
 
     # FIXME! ugly hack to get around broken methods in both YARV and RBX
     if RUBY_VERSION =~ /1.9/
